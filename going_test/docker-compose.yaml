@@ -1,0 +1,10 @@
+version: "3.2"
+services:
+  database:
+    image: postgres
+    environment:
+      - POSTGRES_USER=going_user
+      - POSTGRES_PASSWORD=going_password
+      - POSTGRES_DB=going_test
+    ports:
+      - 5432:5432
