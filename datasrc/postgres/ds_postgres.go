@@ -3,9 +3,10 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"going/datasrc"
 	"log"
 	"sync"
+
+	"github.com/mlu1109/going/datasrc"
 )
 
 type DS struct {

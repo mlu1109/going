@@ -1,10 +1,11 @@
 package going_test
 
 import (
-	"going"
-	"going/migrsrc"
-	"going/migrsrc/slice"
 	"testing"
+
+	"github.com/mlu1109/going"
+	"github.com/mlu1109/going/migrsrc"
+	"github.com/mlu1109/going/migrsrc/slice"
 
 	"github.com/stretchr/testify/assert"
 )

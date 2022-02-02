@@ -1,4 +1,4 @@
-module going
+module github.com/mlu1109/going
 
 go 1.16
 

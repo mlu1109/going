@@ -3,10 +3,11 @@ package going
 import (
 	"errors"
 	"fmt"
-	"going/datasrc"
-	"going/migrsrc"
 	"log"
 	"sort"
+
+	"github.com/mlu1109/going/datasrc"
+	"github.com/mlu1109/going/migrsrc"
 )
 
 type G struct {

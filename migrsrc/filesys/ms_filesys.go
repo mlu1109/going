@@ -3,11 +3,12 @@ package filesys
 import (
 	"errors"
 	"fmt"
-	"going/migrsrc"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/mlu1109/going/migrsrc"
 )
 
 type MS struct {

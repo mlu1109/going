@@ -3,12 +3,13 @@ package going_test
 import (
 	"database/sql"
 	"fmt"
-	"going"
-	"going/datasrc"
-	"going/datasrc/postgres"
-	"going/migrsrc"
-	"going/migrsrc/slice"
 	"log"
+
+	"github.com/mlu1109/going"
+	"github.com/mlu1109/going/datasrc"
+	"github.com/mlu1109/going/datasrc/postgres"
+	"github.com/mlu1109/going/migrsrc"
+	"github.com/mlu1109/going/migrsrc/slice"
 
 	_ "github.com/lib/pq"
 )

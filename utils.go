@@ -2,9 +2,10 @@ package going
 
 import (
 	"fmt"
-	"going/datasrc"
-	"going/migrsrc"
 	"sort"
+
+	"github.com/mlu1109/going/datasrc"
+	"github.com/mlu1109/going/migrsrc"
 )
 
 func findMigration(migrations []*datasrc.Migration, predicate func(*datasrc.Migration) bool) *datasrc.Migration {

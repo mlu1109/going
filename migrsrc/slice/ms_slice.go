@@ -1,6 +1,6 @@
 package slice
 
-import "going/migrsrc"
+import "github.com/mlu1109/going/migrsrc"
 
 type MS struct {
 	migrations []*migrsrc.Migration
