@@ -45,6 +45,21 @@ func New(options ...Option) *DS {
 	for _, option := range options {
 		option(dspg)
 	}
+	err := dspg.Lock()
+	if err != nil {
+		log.Panic(err)
+	}
+	defer dspg.Unlock(err == nil)
+	if dspg.createSchema {
+		err = dspg.execCreateSchema()
+	}
+	if err != nil {
+		log.Panic(err)
+	}
+	dspg.execCreateTable()
+	if err != nil {
+		log.Panic(err)
+	}
 	return dspg
 }
 
@@ -99,12 +114,12 @@ func (d *DS) Clean() error {
 		return err
 	}
 	log.Print("Creating managed schema...")
-	_, err = tx.Exec(fmt.Sprintf(queryCreateSchema, d.schemaName))
+	err = d.execCreateSchema()
 	if err != nil {
 		return err
 	}
 	log.Print("Creating history table...")
-	_, err = tx.Exec(fmt.Sprintf(queryCreateHistoryTable, d.historyTableName))
+	err = d.execCreateTable()
 	return err
 }
 
@@ -159,4 +174,14 @@ func (d *DS) getTX() (*sql.Tx, error) {
 		return nil, fmt.Errorf("Lock not acquired")
 	}
 	return d.tx, nil
+}
+
+func (d *DS) execCreateSchema() error {
+	_, err := d.tx.Exec(fmt.Sprintf(queryCreateSchema, d.schemaName))
+	return err
+}
+
+func (d *DS) execCreateTable() error {
+	_, err := d.tx.Exec(fmt.Sprintf(queryCreateHistoryTable, d.historyTableName))
+	return err
 }
