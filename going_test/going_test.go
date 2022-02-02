@@ -48,7 +48,7 @@ func init() {
 	log.Print("Initialized tests")
 }
 
-func NewTestgoing(migrations []*migrsrc.Migration) *going.G {
+func NewTestGoing(migrations []*migrsrc.Migration) *going.G {
 	g, err := going.New(slice.New(migrations), ds)
 	if err != nil {
 		log.Panic(err)

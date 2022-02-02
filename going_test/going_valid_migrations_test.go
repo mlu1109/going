@@ -25,17 +25,18 @@ var valid_migrations = []*migrsrc.Migration{
 		alter table test_table add column v2_added integer;`,
 	},
 	{
-		Version:     3,
-		Description: "Migration V3",
+		Version:     4,
+		Description: "Migration V4",
 		Content: `
 		alter table test_table add column v3_added text;`,
 	},
 }
 
 func TestMigrateWithValidMigrations(t *testing.T) {
+
 	t.Run("Apply migrations once", func(t *testing.T) {
 		// Given
-		g := NewTestgoing(valid_migrations)
+		g := NewTestGoing(valid_migrations)
 		// When
 		err := g.Migrate()
 		// Then ...
@@ -59,9 +60,10 @@ func TestMigrateWithValidMigrations(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 1, int(rowsAffected))
 	})
+
 	t.Run("Apply migrations twice", func(t *testing.T) {
 		// Given
-		g := NewTestgoing(valid_migrations)
+		g := NewTestGoing(valid_migrations)
 		err := g.Migrate()
 		assert.Nil(t, err)
 		_, err = db.Exec("insert into test_table (id, num, v2_added, v3_added) values ('1', 1, 2, '3')")
