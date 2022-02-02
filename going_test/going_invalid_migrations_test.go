@@ -24,7 +24,7 @@ func TestMigrateWithInvalidMigrations(t *testing.T) {
 		// Then ...
 		// ... error was returned
 		assert.NotNil(t, err)
-		assert.Equal(t, "encountered local unapplied migration with a lesser version than applied migration: 3", err.Error())
+		assert.Equal(t, "encountered a local unapplied migration with a lower version than an already applied migration: 3 vs 4", err.Error())
 		// ... migrations were not applied
 		applied, err := getAppliedMigrations()
 		assert.Nil(t, err)
