@@ -37,24 +37,45 @@ func New(ms migrsrc.MS, ds datasrc.DS, opts ...Option) (*G, error) {
 
 func (g *G) Migrate() error {
 	log.Print("Migrating datasource...")
-	migrations, err := g.ms.Load()
+	// Load local migrations and map them by version
+	local, err := g.ms.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load migrations: %w", err)
 	}
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].Version < migrations[j].Version
-	})
-	log.Printf("Applying %d migrations...", len(migrations))
-	for i, m := range migrations {
-		log.Printf("Applying migration %d/%d: '%s'...", i+1, len(migrations), m)
-		applied, err := g.apply(m)
+	localMappedByVersion, err := getLocalMigrationsMappedByVersion(local)
+	if err != nil {
+		return err
+	}
+	// Acquire datasource lock
+	err = g.ds.Lock()
+	if err != nil {
+		return fmt.Errorf("failed to lock datasource: %w", err)
+	}
+	defer g.ds.Unlock(err == nil)
+	// Load applied migrations and map them by version
+	applied, err := g.ds.GetAppliedMigrations()
+	if err != nil {
+		return err
+	}
+	appliedMappedByVersion, err := getDatasrcMigrationMappedByVersion(applied)
+	if err != nil {
+		return err
+	}
+	// Validate migrations and get applicable versions
+	applicableVersions, err := g.getApplicableVersions(localMappedByVersion, appliedMappedByVersion)
+	if err != nil {
+		return err
+	}
+	// Apply migrations
+	log.Printf("Applying %d migrations...", len(applicableVersions))
+	for i, v := range applicableVersions {
+		log.Printf("Applying migration %d/%d: %d...", i+1, len(applicableVersions), v)
+		applied, err := g.apply(localMappedByVersion[v])
 		if err != nil {
 			return fmt.Errorf("failed to apply migration %w", err)
 		}
-		if applied {
-			log.Print("Successfully applied migration!")
-		} else {
-			log.Print("Nothing to do, migration has already been applied!")
+		if !applied {
+			log.Panic("wtf...")
 		}
 	}
 	log.Print("Datasource was successfully migrated!")
@@ -72,58 +93,58 @@ func (g *G) Clean() error {
 	if err != nil {
 		return fmt.Errorf("failed to clean: %w", err)
 	}
-	log.Print("Datasource cleaned!")
+	log.Print("Datasource was successfully cleaned!")
+	return nil
+}
+
+func (g *G) getApplicableVersions(local map[uint]*migrsrc.Migration, applied map[uint]*datasrc.Migration) ([]uint, error) {
+	matchingVersions := make([]uint, 0)
+	for version, a := range applied {
+		l, ok := local[version]
+		if !ok {
+			return nil, fmt.Errorf("applied migration has no local migration: %d", version)
+		}
+		err := g.validateMigration(l, a)
+		if err != nil {
+			return nil, err
+		}
+		matchingVersions = append(matchingVersions, version)
+	}
+	sort.Slice(matchingVersions, func(i, j int) bool {
+		return matchingVersions[i] < matchingVersions[j]
+	})
+	localVersions := getKeysSorted(local)
+	for i, v := range matchingVersions {
+		if localVersions[i] != v {
+			return nil, fmt.Errorf("encountered a local unapplied migration with a lower version than an already applied migration: %d vs %d", localVersions[i], v)
+		}
+	}
+	return localVersions[len(matchingVersions):], nil
+}
+
+func (g *G) validateMigration(local *migrsrc.Migration, applied *datasrc.Migration) error {
+	if local.Version != applied.Version {
+		return fmt.Errorf("local version does not match applied version")
+	}
+	if local.Description != applied.Description {
+		return fmt.Errorf("local description does not match applied description")
+	}
+	localChecksum, err := g.checksum(local.Content)
+	if err != nil {
+		return fmt.Errorf("failed to calculate checksum: %w", err)
+	}
+	appliedChecksum := applied.Checksum
+	if localChecksum != appliedChecksum {
+		return fmt.Errorf("local checksum does not match applied checksum: %s != %s", localChecksum, appliedChecksum)
+	}
 	return nil
 }
 
 func (g *G) apply(m *migrsrc.Migration) (bool, error) {
-	err := g.ds.Lock()
-	if err != nil {
-		return false, err
-	}
-	defer g.ds.Unlock(err == nil)
-	applied, err := g.ds.GetAppliedMigrations()
-	if err != nil {
-		return false, err
-	}
-	shouldApply, err := g.isApplicable(m, applied)
-	if err != nil {
-		return false, err
-	}
-	if !shouldApply {
-		return false, nil
-	}
 	checksum, err := g.checksum(m.Content)
 	if err != nil {
 		return false, err
 	}
 	err = g.ds.ApplyMigration(m.Version, m.Description, checksum, m.Content)
 	return true, err
-}
-
-func (g *G) isApplicable(m *migrsrc.Migration, applied []*datasrc.Migration) (bool, error) {
-	exEqVer := findMigration(applied, func(other *datasrc.Migration) bool {
-		return other.Version == m.Version
-	})
-	if exEqVer != nil && g.isMatching(m, exEqVer) {
-		return false, nil
-	}
-	if exEqVer != nil {
-		return false, fmt.Errorf("mismatching migrations")
-	}
-	exGtVer := findMigration(applied, func(other *datasrc.Migration) bool {
-		return m.Version < other.Version
-	})
-	if exGtVer != nil {
-		return false, fmt.Errorf("encountered applied migration with greater version")
-	}
-	return true, nil
-}
-
-func (g *G) isMatching(mms *migrsrc.Migration, mds *datasrc.Migration) bool {
-	checksum, err := g.checksum(mms.Content)
-	if err != nil {
-		return false
-	}
-	return mms.Version == mds.Version && mms.Description == mds.Description && checksum == mds.Checksum
 }
